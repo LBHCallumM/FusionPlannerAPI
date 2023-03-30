@@ -9,9 +9,7 @@ namespace FusionPlannerAPI.Infrastructure
         public string Name { get; set; }
         public string Description { get; set; }
         public int OwnerId { get; set; }
-        public User Owner { get; set; }
-        public List<int> ListOrder { get; set; }
-        public int ListOrderVersion { get; set; }
-        public ICollection<List> Lists { get; set; }
+        public virtual User Owner { get; set; }
+        public virtual ICollection<Column> Columns { get; set; }
     }
 }
