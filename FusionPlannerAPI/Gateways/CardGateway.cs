@@ -8,7 +8,6 @@ using FusionPlannerAPI.Services;
 
 namespace FusionPlannerAPI.Gateways
 {
-
     public class CardGateway : ICardGateway
     {
         private readonly PlannerDbContext _dbContext;

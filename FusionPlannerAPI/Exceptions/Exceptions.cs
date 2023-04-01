@@ -2,41 +2,41 @@
 {
     public class BoardNotFoundException : Exception
     {
-        private int boardId;
+        public readonly int BoardId;
 
         public BoardNotFoundException(int boardId)
         {
-            this.boardId = boardId;
+            BoardId = boardId;
         }
     }
 
     public class UserNotFoundException : Exception
     {
-        private int userId;
+        public readonly int UserId;
 
         public UserNotFoundException(int userId)
         {
-            this.userId = userId;
+            UserId = userId;
         }
     }
 
     public class ColumnNotFoundException : Exception
     {
-        private int columnId;
+        public readonly int ColumnId;
 
         public ColumnNotFoundException(int columnId)
         {
-            this.columnId = columnId;
+            ColumnId = columnId;
         }
     }
 
     public class CardNotFoundException : Exception
     {
-        private int cardId;
+        public readonly int CardId;
 
         public CardNotFoundException(int cardId)
         {
-            this.cardId = cardId;
+            CardId = cardId;
         }
     }
 }
