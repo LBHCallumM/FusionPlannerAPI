@@ -9,6 +9,6 @@ namespace FusionPlannerAPI.Infrastructure
         public string Name { get; set; }
         public int BoardId { get; set; }
         public virtual Board Board { get; set; }
-        public virtual ICollection<Card> Cards { get; set; }
+        public virtual List<Card> Cards { get; set; }
     }
 }

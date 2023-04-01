@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using System.Collections.Generic;
 using System.Linq;
+using Column = FusionPlannerAPI.Infrastructure.Column;
 
 namespace FusionPlannerAPI.Gateways
 {
@@ -74,6 +75,77 @@ namespace FusionPlannerAPI.Gateways
 
             _dbContext.Columns.Remove(column);
             await _dbContext.SaveChangesAsync();
+        }
+
+        public async Task MoveCard(MoveCardRequestObject request)
+        {
+
+            // Add checks on destination index (destionation list has number of elemetns)
+            // or greater than zero
+
+            var card = await _dbContext.Cards.FindAsync(request.CardId);
+            if (card == null) throw new CardNotFoundException(request.CardId);
+
+            if (CardAlreadyInPosition(request, card))
+            {
+                return;
+            }
+
+            var sourceList = await _dbContext.Columns.FindAsync(request.SourceColumnId);
+            if (sourceList == null) throw new ColumnNotFoundException(request.SourceColumnId);
+
+            if (request.SourceColumnId == request.DestinationColumnId)
+            {
+                if (request.DestinationCardIndex < 0 || request.DestinationCardIndex >= sourceList.Cards.Count)
+                {
+                    throw new ArgumentException($"{nameof(request.DestinationCardIndex)} is out of range");
+                }
+            }
+
+            sourceList.Cards.Remove(card);
+
+            Column destinationList = null;
+
+            // Check if the card is being moved to a different list
+            if (request.SourceColumnId != request.DestinationColumnId)
+            {
+                destinationList = await _dbContext.Columns.FindAsync(request.DestinationColumnId);
+                if (destinationList == null) throw new ColumnNotFoundException(request.DestinationColumnId);
+
+                if (request.DestinationCardIndex < 0 || request.DestinationCardIndex >= destinationList.Cards.Count + 1)
+                {
+                    throw new ArgumentException($"{nameof(request.DestinationCardIndex)} is out of range");
+                }
+
+                destinationList.Cards.Insert(request.DestinationCardIndex, card);
+                card.ColumnId = destinationList.Id;
+            }
+            else
+            {
+                // Move the card within the same list
+                sourceList.Cards.Insert(request.DestinationCardIndex, card);
+            }
+
+            for (int i = 0; i < sourceList.Cards.Count; i++)
+            {
+                sourceList.Cards.ElementAt(i).DisplayOrder = i + 1;
+            }
+
+            if (destinationList != null)
+            {
+                for (int i = 0; i < destinationList.Cards.Count; i++)
+                {
+                    destinationList.Cards.ElementAt(i).DisplayOrder = i + 1;
+                }
+
+            }
+
+            await _dbContext.SaveChangesAsync();
+        }
+
+        private static bool CardAlreadyInPosition(MoveCardRequestObject request, Card card)
+        {
+            return card.DisplayOrder == request.DestinationCardIndex && request.SourceColumnId == request.DestinationColumnId;
         }
     }
 }

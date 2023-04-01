@@ -11,5 +11,6 @@ namespace FusionPlannerAPI.Gateways.Interfaces
         Task<int> CreateColumn(CreateColumnRequest request);
         Task EditColumn(int columnId, EditColumnRequest request);
         Task DeleteColumn(int columnId);
+        Task MoveCard(MoveCardRequestObject request);
     }
 }

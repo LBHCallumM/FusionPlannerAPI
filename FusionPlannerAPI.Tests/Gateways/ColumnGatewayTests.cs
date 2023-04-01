@@ -8,6 +8,7 @@ using FusionPlannerAPI.Gateways.Interfaces;
 using FusionPlannerAPI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using NUnit.Framework;
+using System.Net;
 using Column = FusionPlannerAPI.Infrastructure.Column;
 
 namespace FusionPlannerAPI.Tests.Gateways
@@ -219,6 +220,301 @@ namespace FusionPlannerAPI.Tests.Gateways
             var dbResponse = await InMemoryDb.Instance.Columns.FindAsync(column.Id);
             dbResponse.Should().BeNull();
         }
+
+        [Test]
+        public async Task MoveCard_ThrowsException_WhenCarddIsInvalid()
+        {
+            // Arrange
+            var cardId = 1;
+            var sourceListId = 1;
+
+            var request = new MoveCardRequestObject
+            {
+                CardId = cardId,
+                SourceColumnId = sourceListId,
+                DestinationColumnId = sourceListId,
+                DestinationCardIndex = 0
+            };
+
+            // Act
+            Func<Task> act = async () => await _columnGateway.MoveCard(request);
+
+            // Assert
+            await act.Should().ThrowAsync<CardNotFoundException>();
+        }
+
+        [Test]
+        public async Task MoveCard_ThrowsException_WhenSourceListIdIsInvalid()
+        {
+            // Arrange
+            var sourceListId = 1;
+
+            var card = _fixture.Build<Card>()
+                .With(x => x.ColumnId, 2)
+                .Create();
+
+            InMemoryDb.Instance.Cards.Add(card);
+            await InMemoryDb.Instance.SaveChangesAsync();
+
+            var request = new MoveCardRequestObject
+            {
+                CardId = card.Id,
+                SourceColumnId = sourceListId,
+                DestinationColumnId = sourceListId,
+                DestinationCardIndex = 0
+            };
+
+            // Act
+            Func<Task> act = async () => await _columnGateway.MoveCard(request);
+
+            // Assert
+            await act.Should().ThrowAsync<ColumnNotFoundException>();
+        }
+
+        [Test]
+        public async Task MoveCard_ThrowsException_WhenDestinationListIdIsInvalid()
+        {
+            // Arrange
+            var sourceList = await SetupColumn(1, 5);
+            var destinationListId = 2;
+
+            var request = new MoveCardRequestObject
+            {
+                CardId = sourceList.Cards[0].Id,
+                SourceColumnId = sourceList.Id,
+                DestinationColumnId = destinationListId,
+                DestinationCardIndex = 4
+            };
+
+            // Act
+            Func<Task> act = async () => await _columnGateway.MoveCard(request);
+
+            // Assert
+            await act.Should().ThrowAsync<ColumnNotFoundException>();
+        }
+
+        [Test]
+        public async Task MoveCard_WhenMovingTheCardToAHigherIndexInTheSameList_UpdatesTheDisplayOrder()
+        {
+            // Arrange
+            var sourceList = await SetupColumn(1, 5);
+
+            var request = new MoveCardRequestObject
+            {
+                CardId = sourceList.Cards[0].Id,
+                SourceColumnId = sourceList.Id,
+                DestinationColumnId = sourceList.Id,
+                DestinationCardIndex = 4
+            };
+
+            // Act
+            await _columnGateway.MoveCard(request);
+
+            // Assert
+            var dbResponse = await InMemoryDb.Instance.Cards
+                .Where(x => x.ColumnId == sourceList.Id)
+                .OrderBy(x => x.DisplayOrder)
+                .ToListAsync();
+
+            var responseIds = dbResponse.Select(x => x.Id).ToList();
+
+            var expectedOrderIds = new List<int> { 2, 3, 4, 5, 1 };
+
+            responseIds.Should().BeEquivalentTo(expectedOrderIds, options => options.WithStrictOrdering());
+        }
+
+        [TestCase(-1, 1)]
+        [TestCase(5, 1)]
+        [TestCase(-1, 2)]
+        [TestCase(6, 2)]
+        public async Task MoveCard_WhenMovingTheCardToInvalidIndex_ThrowsArgumentException(int destinationIndex, int destinationColumnId)
+        {
+            // Arrange
+            var sourceList = await SetupColumn(1, 5);
+            var destinationList = await SetupColumn(2, 5, 5);
+
+            var request = new MoveCardRequestObject
+            {
+                CardId = sourceList.Cards[0].Id,
+                SourceColumnId = sourceList.Id,
+                DestinationColumnId = destinationColumnId,
+                DestinationCardIndex = destinationIndex
+            };
+
+            // Act
+            Func<Task> act = async () => await _columnGateway.MoveCard(request);
+
+            // Assert
+            await act.Should().ThrowAsync<ArgumentException>();
+        }
+
+        [Test]
+        public async Task MoveCard_WhenMovingTheCardToLowerIndexInTheSameList_UpdatesTheDisplayOrder()
+        {
+            // Arrange
+            var sourceList = await SetupColumn(1,5);
+
+            var request = new MoveCardRequestObject
+            {
+                CardId = sourceList.Cards[4].Id,
+                SourceColumnId = sourceList.Id,
+                DestinationColumnId = sourceList.Id,
+                DestinationCardIndex = 0
+            };
+
+            // Act
+            await _columnGateway.MoveCard(request);
+
+            // Assert
+            var dbResponse = await InMemoryDb.Instance.Cards
+                .Where(x => x.ColumnId == sourceList.Id)
+                .OrderBy(x => x.DisplayOrder)
+                .ToListAsync();
+
+            var responseIds = dbResponse.Select(x => x.Id).ToList();
+
+            var expectedOrderIds = new List<int> { 5, 1, 2, 3, 4 };
+
+            responseIds.Should().BeEquivalentTo(expectedOrderIds, options => options.WithStrictOrdering());
+        }
+
+        [Test]
+        public async Task MoveCard_WhenMovingTheCardToAHigherIndexInADifferentList_UpdatesTheDisplayOrder()
+        {
+            // Arrange
+            var sourceList = await SetupColumn(1, 5);
+            var destinationList = await SetupColumn(2, 5, 5);
+
+            var request = new MoveCardRequestObject
+            {
+                CardId = sourceList.Cards[0].Id,
+                SourceColumnId = sourceList.Id,
+                DestinationColumnId = destinationList.Id,
+                DestinationCardIndex = 5
+            };
+
+            // Act
+            await _columnGateway.MoveCard(request);
+
+            // Assert
+            var dbResponseSourceList = await InMemoryDb.Instance.Cards
+                .Where(x => x.ColumnId == sourceList.Id)
+                .OrderBy(x => x.DisplayOrder)
+                .ToListAsync();
+
+            var dbResponseDestinationList = await InMemoryDb.Instance.Cards
+                .Where(x => x.ColumnId == destinationList.Id)
+                .OrderBy(x => x.DisplayOrder)
+                .ToListAsync();
+
+            var responseIdsSourceList = dbResponseSourceList.Select(x => x.Id).ToList();
+            var responseIdsdestinatioList = dbResponseDestinationList.Select(x => x.Id).ToList();
+
+            var sourceListExpectedOrderIds = new List<int> { 2, 3, 4, 5 };
+            var destinationListExpectedOrderIds = new List<int> { 6, 7, 8, 9, 10, 1 };
+
+            responseIdsSourceList.Should().BeEquivalentTo(sourceListExpectedOrderIds, options => options.WithStrictOrdering());
+            responseIdsdestinatioList.Should().BeEquivalentTo(destinationListExpectedOrderIds, options => options.WithStrictOrdering());
+        }
+
+        [Test]
+        public async Task MoveCard_WhenMovingTheCardToLowerIndexInADifferentList_UpdatesTheDisplayOrder()
+        {
+            // Arrange
+            var sourceList = await SetupColumn(1, 5);
+            var destinationList = await SetupColumn(2, 5, 5);
+
+            var request = new MoveCardRequestObject
+            {
+                CardId = sourceList.Cards[4].Id,
+                SourceColumnId = sourceList.Id,
+                DestinationColumnId = destinationList.Id,
+                DestinationCardIndex = 0
+            };
+
+            // Act
+            await _columnGateway.MoveCard(request);
+
+            // Assert
+            var dbResponseSourceList = await InMemoryDb.Instance.Cards
+                .Where(x => x.ColumnId == sourceList.Id)
+                .OrderBy(x => x.DisplayOrder)
+                .ToListAsync();
+
+            var dbResponseDestinationList = await InMemoryDb.Instance.Cards
+                .Where(x => x.ColumnId == destinationList.Id)
+                .OrderBy(x => x.DisplayOrder)
+                .ToListAsync();
+
+            var responseIdsSourceList = dbResponseSourceList.Select(x => x.Id).ToList();
+            var responseIdsdestinatioList = dbResponseDestinationList.Select(x => x.Id).ToList();
+
+            var sourceListExpectedOrderIds = new List<int> { 1, 2, 3, 4 };
+            var destinationListExpectedOrderIds = new List<int> { 5, 6, 7, 8, 9, 10 };
+
+            responseIdsSourceList.Should().BeEquivalentTo(sourceListExpectedOrderIds, options => options.WithStrictOrdering());
+            responseIdsdestinatioList.Should().BeEquivalentTo(destinationListExpectedOrderIds, options => options.WithStrictOrdering());
+        }
+
+        [Test]
+        public async Task MoveCard_WhenMovingTheCardToAnEmptyList_UpdatesTheDisplayOrder()
+        {
+            // Arrange
+            var sourceList = await SetupColumn(1, 5);
+            var destinationList = await SetupColumn(2, 0);
+
+            var request = new MoveCardRequestObject
+            {
+                CardId = sourceList.Cards[0].Id,
+                SourceColumnId = sourceList.Id,
+                DestinationColumnId = destinationList.Id,
+                DestinationCardIndex = 0
+            };
+
+            // Act
+            await _columnGateway.MoveCard(request);
+
+            // Assert
+            var dbResponseSourceList = await InMemoryDb.Instance.Cards
+                .Where(x => x.ColumnId == sourceList.Id)
+                .OrderBy(x => x.DisplayOrder)
+                .ToListAsync();
+
+            var dbResponseDestinationList = await InMemoryDb.Instance.Cards
+                .Where(x => x.ColumnId == destinationList.Id)
+                .OrderBy(x => x.DisplayOrder)
+                .ToListAsync();
+
+            var responseIdsSourceList = dbResponseSourceList.Select(x => x.Id).ToList();
+            var responseIdsdestinatioList = dbResponseDestinationList.Select(x => x.Id).ToList();
+
+            var sourceListExpectedOrderIds = new List<int> { 2, 3, 4, 5 };
+            var destinationListExpectedOrderIds = new List<int> { 1 };
+
+            responseIdsSourceList.Should().BeEquivalentTo(sourceListExpectedOrderIds, options => options.WithStrictOrdering());
+            responseIdsdestinatioList.Should().BeEquivalentTo(destinationListExpectedOrderIds, options => options.WithStrictOrdering());
+        }
+
+
+        private async Task<Column> SetupColumn(int columnId, int total, int idOffset = 0)
+        {
+            var column = _fixture.Build<Column>()
+                            .With(x => x.Id, columnId)
+                            .With(c => c.Cards, _fixture.Build<Card>()
+                            .CreateMany(total).ToList())
+                            .Create();
+
+            for (int i = 0; i < column.Cards.Count; i++)
+            {
+                column.Cards[i].DisplayOrder = i + 1;
+                column.Cards[i].Id = i + 1 + idOffset;
+            }
+
+            InMemoryDb.Instance.Columns.Add(column);
+            await InMemoryDb.Instance.SaveChangesAsync();
+            return column;
+        }
+
     }
 }
     
