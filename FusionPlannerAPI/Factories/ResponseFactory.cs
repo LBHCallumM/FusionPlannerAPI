@@ -49,6 +49,7 @@ namespace FusionPlannerAPI.Factories
                 LastEditedAt = database.LastEditedAt,
                 CreatedById = database.CreatedById,
                 DisplayOrder = database.DisplayOrder,
+                IsArchived = database.IsArchived
             };
         }
 

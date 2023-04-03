@@ -10,5 +10,6 @@
         public DateTime LastEditedAt { get; set; }
         public int CreatedById { get; set; }
         public int DisplayOrder { get; set; }
+        public bool IsArchived { get; set; }
     }
 }

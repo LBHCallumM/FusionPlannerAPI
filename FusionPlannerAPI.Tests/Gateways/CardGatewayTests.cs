@@ -110,10 +110,31 @@ namespace FusionPlannerAPI.Tests.Gateways
         }
 
         [Test]
+        public async Task DeleteCard_WhenNotArchived_ThrowsException()
+        {
+            // Arrange
+            var card = _fixture.Build<Card>()
+                .With(x => x.IsArchived, false)
+                .Create();
+
+            await InMemoryDb.Instance.Cards.AddAsync(card);
+            await InMemoryDb.Instance.SaveChangesAsync();
+
+            // Act
+            Func<Task> act = async () => await _cardGateway.DeleteCard(card.Id);
+
+            // Assert
+            await act.Should().ThrowAsync<CannotDeleteCardException>();
+
+        }
+
+        [Test]
         public async Task DeleteCard_WhenCalled_RemovesCardFromDatabase()
         {
             // Arrange
-            var card = _fixture.Build<Card>().Create();
+            var card = _fixture.Build<Card>()
+                .With(x => x.IsArchived, true)
+                .Create();
 
             await InMemoryDb.Instance.Cards.AddAsync(card);
             await InMemoryDb.Instance.SaveChangesAsync();
@@ -141,10 +162,32 @@ namespace FusionPlannerAPI.Tests.Gateways
         }
 
         [Test]
+        public async Task EditCard_WhenArchived_ThrowsException()
+        {
+            // Arrange
+            var card = _fixture.Build<Card>()
+                .With(x => x.IsArchived, true)
+                .Create();
+
+            await InMemoryDb.Instance.Cards.AddAsync(card);
+            await InMemoryDb.Instance.SaveChangesAsync();
+
+            var request = _fixture.Create<EditCardRequest>();
+
+            // Act
+            Func<Task> act = async () => await _cardGateway.EditCard(card.Id, request);
+
+            // Assert
+            await act.Should().ThrowAsync<CannotEditArchivedCardException>();
+        }
+
+        [Test]
         public async Task EditCard_WhenCalled_SavesChangesToDatabase()
         {
             // Arrange
-            var card = _fixture.Build<Card>().Create();
+            var card = _fixture.Build<Card>()
+                .With(x => x.IsArchived, false)
+                .Create();
 
             await InMemoryDb.Instance.Cards.AddAsync(card);
             await InMemoryDb.Instance.SaveChangesAsync();
@@ -213,6 +256,27 @@ namespace FusionPlannerAPI.Tests.Gateways
 
             dbResponse.Should().NotBeNull();
             dbResponse.IsArchived.Should().BeTrue();
+        }
+
+        [Test]
+        public async Task RestoreCard_WhenTrue_SetsCardToArchived()
+        {
+            // Arrange
+            var card = _fixture.Build<Card>()
+                .With(x => x.IsArchived, true)
+                .Create();
+
+            await InMemoryDb.Instance.Cards.AddAsync(card);
+            await InMemoryDb.Instance.SaveChangesAsync();
+
+            // Act
+            await _cardGateway.RestoreCard(card.Id);
+
+            // Assert
+            var dbResponse = await InMemoryDb.Instance.Cards.FindAsync(card.Id);
+
+            dbResponse.Should().NotBeNull();
+            dbResponse.IsArchived.Should().BeFalse();
         }
     }
 }

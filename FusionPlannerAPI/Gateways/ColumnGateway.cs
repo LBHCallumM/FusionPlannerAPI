@@ -41,6 +41,11 @@ namespace FusionPlannerAPI.Gateways
                 .Include(x => x.Cards)
                 .ToListAsync();
 
+            foreach (var column in columns)
+            {
+                column.Cards = column.Cards.Where(x => x.IsArchived == false).ToList();
+            }
+
             return columns.ToResponse();
         }
 

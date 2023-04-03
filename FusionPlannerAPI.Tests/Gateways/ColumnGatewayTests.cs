@@ -89,6 +89,39 @@ namespace FusionPlannerAPI.Tests.Gateways
         }
 
         [Test]
+        public async Task ListColumns_WhenCardsAreArchived_OnlyIncludesActiveCards()
+        {
+            // Arrange
+            var board = _fixture.Build<Board>().Create();
+
+            InMemoryDb.Instance.Boards.Add(board);
+            await InMemoryDb.Instance.SaveChangesAsync();
+
+            var cards = _fixture.Build<Card>()
+                .With(x => x.IsArchived, false)
+                .CreateMany(2)
+                .ToList();
+
+            cards.First().IsArchived = true;
+
+            var column = _fixture.Build<Column>()
+                .With(c => c.BoardId, board.Id)
+                .Without(x => x.Board)
+                .With(x => x.Cards, cards)
+                .Create();
+
+            InMemoryDb.Instance.Columns.Add(column);
+            await InMemoryDb.Instance.SaveChangesAsync();
+
+            // Act
+            var result = await _columnGateway.ListColumns(board.Id);
+
+            // Assert
+            result.Should().NotBeNullOrEmpty();
+            result.First().Cards.Should().HaveCount(cards.Count() -1);
+        }
+
+        [Test]
         public async Task ListColumns_WhenCalled_ReturnsColumnsAndCards()
         {
             // Arrange
@@ -98,6 +131,7 @@ namespace FusionPlannerAPI.Tests.Gateways
             await InMemoryDb.Instance.SaveChangesAsync();
 
             var cards = _fixture.Build<Card>()
+                .With(x => x.IsArchived, false)
                 .CreateMany(2)
                 .ToList();
 

@@ -16,29 +16,34 @@ namespace FusionPlannerAPI.Services
             _gateway = cardGateway;
         }
 
-        public async Task ArchiveCard(int cardId)
+        public Task ArchiveCard(int cardId)
         {
-            await _gateway.ArchiveCard(cardId);
+            return _gateway.ArchiveCard(cardId);
         }
 
-        public async Task<int> CreateCard(CreateCardRequest request, int createdById)
+        public Task<int> CreateCard(CreateCardRequest request, int createdById)
         {
-            return await _gateway.CreateCard(request, createdById);
+            return _gateway.CreateCard(request, createdById);
         }
 
-        public async Task DeleteCard(int cardId)
+        public Task DeleteCard(int cardId)
         {
-            await _gateway.DeleteCard(cardId);
+            return _gateway.DeleteCard(cardId);
         }
 
-        public async Task EditCard(int cardId, EditCardRequest request)
+        public Task EditCard(int cardId, EditCardRequest request)
         {
-            await _gateway.EditCard(cardId, request);
+            return _gateway.EditCard(cardId, request);
         }
 
-        public async Task<CardResponse> GetById(int cardId)
+        public Task<CardResponse> GetById(int cardId)
         {
-            return await _gateway.GetById(cardId);
+            return _gateway.GetById(cardId);
+        }
+
+        public Task RestoreCard(int cardId)
+        {
+            return _gateway.RestoreCard(cardId);
         }
     }
 }

@@ -63,6 +63,10 @@ namespace FusionPlannerAPI.Controllers
             {
                 return BadRequest(e.Message);
             }
+            catch (CannotEditArchivedCardException e)
+            {
+                return BadRequest(e.Message);
+            }
         }
 
         [HttpDelete]
@@ -79,6 +83,10 @@ namespace FusionPlannerAPI.Controllers
             {
                 return BadRequest(e.Message);
             }
+            catch (CannotEditArchivedCardException e)
+            {
+                return BadRequest(e.Message);
+            }
         }
 
         [HttpPost]
@@ -88,6 +96,22 @@ namespace FusionPlannerAPI.Controllers
             try
             {
                 await _cardService.ArchiveCard(cardId);
+
+                return NoContent();
+            }
+            catch (CardNotFoundException e)
+            {
+                return BadRequest(e.Message);
+            }
+        }
+
+        [HttpPost]
+        [Route("{cardId}/restore")]
+        public async Task<IActionResult> Restore([FromRoute] int cardId)
+        {
+            try
+            {
+                await _cardService.RestoreCard(cardId);
 
                 return NoContent();
             }

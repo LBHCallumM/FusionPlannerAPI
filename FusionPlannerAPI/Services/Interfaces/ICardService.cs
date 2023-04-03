@@ -10,5 +10,6 @@ namespace FusionPlannerAPI.Services.Interfaces
         Task EditCard(int cardId, EditCardRequest request);
         Task DeleteCard(int cardId);
         Task ArchiveCard(int cardId);
+        Task RestoreCard(int cardId);
     }
 }

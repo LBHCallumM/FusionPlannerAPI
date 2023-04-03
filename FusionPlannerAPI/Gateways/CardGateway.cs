@@ -50,6 +50,8 @@ namespace FusionPlannerAPI.Gateways
             var card = await _dbContext.Cards.FindAsync(cardId);
             if (card == null) throw new CardNotFoundException(cardId);
 
+            if (!card.IsArchived) throw new CannotDeleteCardException();
+
             _dbContext.Cards.Remove(card);
             await _dbContext.SaveChangesAsync();
         }
@@ -58,6 +60,8 @@ namespace FusionPlannerAPI.Gateways
         {
             var card = await _dbContext.Cards.FindAsync(cardId);
             if (card == null) throw new CardNotFoundException(cardId);
+
+            if (card.IsArchived) throw new CannotEditArchivedCardException();
 
             card.Name = request.Name;
             card.Description = request.Description;
@@ -80,6 +84,16 @@ namespace FusionPlannerAPI.Gateways
             if (card == null) throw new CardNotFoundException(cardId);
 
             card.IsArchived = true;
+
+            await _dbContext.SaveChangesAsync();
+        }
+
+        public async Task RestoreCard(int cardId)
+        {
+            var card = await _dbContext.Cards.FindAsync(cardId);
+            if (card == null) throw new CardNotFoundException(cardId);
+
+            card.IsArchived = false;
 
             await _dbContext.SaveChangesAsync();
         }
