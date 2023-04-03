@@ -41,15 +41,16 @@ namespace FusionPlannerAPI.Controllers
             }
             catch (ColumnNotFoundException e)
             {
-                return BadRequest($"Column not found with id {e.ColumnId}");
+                return BadRequest(e.Message);
             }
             catch (UserNotFoundException e)
             {
-                return BadRequest($"User not found with id {e.UserId}");
+                return BadRequest(e.Message);
             }
         }
 
-        [HttpPut("{cardId}")]
+        [HttpPut]
+        [Route("{cardId}")]
         public async Task<IActionResult> EditCard([FromRoute] int cardId, [FromBody] EditCardRequest request)
         {
             try
@@ -60,11 +61,12 @@ namespace FusionPlannerAPI.Controllers
             }
             catch (CardNotFoundException e)
             {
-                return BadRequest($"Card not found with id {e.CardId}");
+                return BadRequest(e.Message);
             }
         }
 
-        [HttpPut("{cardId}")]
+        [HttpDelete]
+        [Route("{cardId}")]
         public async Task<IActionResult> Delete([FromRoute] int cardId)
         {
             try
@@ -75,7 +77,7 @@ namespace FusionPlannerAPI.Controllers
             }
             catch (CardNotFoundException e)
             {
-                return BadRequest($"Card not found with id {e.CardId}");
+                return BadRequest(e.Message);
             }
         }
     }

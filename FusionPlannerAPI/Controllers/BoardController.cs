@@ -18,7 +18,8 @@ namespace FusionPlannerAPI.Controllers
             _boardService = boardService;
         }
 
-        [HttpGet("{boardId}")]
+        [HttpGet]
+        [Route("{boardId}")]
         public async Task<IActionResult> Get([FromRoute] int boardId)
         {
             var board = await _boardService.GetById(boardId);
@@ -48,12 +49,12 @@ namespace FusionPlannerAPI.Controllers
             }
             catch (UserNotFoundException e)
             {
-                return BadRequest($"User not found with id {e.UserId}");
+                return BadRequest(e.Message);
             }
         }
 
         [HttpPut]
-        [HttpGet("{boardId}")]
+        [Route("{boardId}")]
         public async Task<IActionResult> Edit([FromRoute] int boardId, [FromBody]  EditBoardRequest request)
         {
             try
@@ -64,12 +65,12 @@ namespace FusionPlannerAPI.Controllers
             }
             catch (BoardNotFoundException e)
             {
-                return BadRequest($"Board not found with id {e.BoardId}");
+                return BadRequest(e.Message);
             }
         }
 
         [HttpDelete]
-        [HttpGet("{boardId}")]
+        [Route("{boardId}")]
         public async Task<IActionResult> Delete([FromRoute] int boardId)
         {
             try
@@ -80,7 +81,7 @@ namespace FusionPlannerAPI.Controllers
             }
             catch (BoardNotFoundException e)
             {
-                return BadRequest($"Board not found with id {e.BoardId}");
+                return BadRequest(e.Message);
             }
         }
     }

@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using NUnit.Framework;
 using System.Net;
 using Column = FusionPlannerAPI.Infrastructure.Column;
+using IndexOutOfRangeException = FusionPlannerAPI.Exceptions.IndexOutOfRangeException;
 
 namespace FusionPlannerAPI.Tests.Gateways
 {
@@ -324,7 +325,7 @@ namespace FusionPlannerAPI.Tests.Gateways
         }
 
         [TestCase(-1, 1)]
-        [TestCase(5, 1)]
+        [TestCase(6, 1)]
         [TestCase(-1, 2)]
         [TestCase(6, 2)]
         public async Task MoveCard_WhenMovingTheCardToInvalidIndex_ThrowsArgumentException(int destinationIndex, int destinationColumnId)
@@ -345,7 +346,7 @@ namespace FusionPlannerAPI.Tests.Gateways
             Func<Task> act = async () => await _columnGateway.MoveCard(request);
 
             // Assert
-            await act.Should().ThrowAsync<ArgumentException>();
+            await act.Should().ThrowAsync<IndexOutOfRangeException>();
         }
 
         [Test]
@@ -494,7 +495,6 @@ namespace FusionPlannerAPI.Tests.Gateways
             responseIdsSourceList.Should().BeEquivalentTo(sourceListExpectedOrderIds, options => options.WithStrictOrdering());
             responseIdsdestinatioList.Should().BeEquivalentTo(destinationListExpectedOrderIds, options => options.WithStrictOrdering());
         }
-
 
         private async Task<Column> SetupColumn(int columnId, int total, int idOffset = 0)
         {

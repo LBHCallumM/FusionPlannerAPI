@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using System.Collections.Generic;
 using System.Linq;
 using Column = FusionPlannerAPI.Infrastructure.Column;
+using IndexOutOfRangeException = FusionPlannerAPI.Exceptions.IndexOutOfRangeException;
 
 namespace FusionPlannerAPI.Gateways
 {
@@ -79,73 +80,107 @@ namespace FusionPlannerAPI.Gateways
 
         public async Task MoveCard(MoveCardRequestObject request)
         {
-
-            // Add checks on destination index (destionation list has number of elemetns)
-            // or greater than zero
-
             var card = await _dbContext.Cards.FindAsync(request.CardId);
             if (card == null) throw new CardNotFoundException(request.CardId);
 
             if (CardAlreadyInPosition(request, card))
             {
-                return;
+                throw new CardAlreadyInPositionException();
             }
 
             var sourceList = await _dbContext.Columns.FindAsync(request.SourceColumnId);
             if (sourceList == null) throw new ColumnNotFoundException(request.SourceColumnId);
 
-            if (request.SourceColumnId == request.DestinationColumnId)
-            {
-                if (request.DestinationCardIndex < 0 || request.DestinationCardIndex >= sourceList.Cards.Count)
-                {
-                    throw new ArgumentException($"{nameof(request.DestinationCardIndex)} is out of range");
-                }
-            }
-
-            sourceList.Cards.Remove(card);
-
-            Column destinationList = null;
 
             // Check if the card is being moved to a different list
             if (request.SourceColumnId != request.DestinationColumnId)
             {
-                destinationList = await _dbContext.Columns.FindAsync(request.DestinationColumnId);
-                if (destinationList == null) throw new ColumnNotFoundException(request.DestinationColumnId);
-
-                if (request.DestinationCardIndex < 0 || request.DestinationCardIndex >= destinationList.Cards.Count + 1)
-                {
-                    throw new ArgumentException($"{nameof(request.DestinationCardIndex)} is out of range");
-                }
-
-                destinationList.Cards.Insert(request.DestinationCardIndex, card);
-                card.ColumnId = destinationList.Id;
+                await MoveCardToDifferentColumn(request, card, sourceList);
             }
             else
             {
-                // Move the card within the same list
-                sourceList.Cards.Insert(request.DestinationCardIndex, card);
-            }
-
-            for (int i = 0; i < sourceList.Cards.Count; i++)
-            {
-                sourceList.Cards.ElementAt(i).DisplayOrder = i + 1;
-            }
-
-            if (destinationList != null)
-            {
-                for (int i = 0; i < destinationList.Cards.Count; i++)
-                {
-                    destinationList.Cards.ElementAt(i).DisplayOrder = i + 1;
-                }
-
+                MoveCardWithinSameColumn(request, card, sourceList);
             }
 
             await _dbContext.SaveChangesAsync();
         }
 
+        private static void CheckDestinationIndexInRange(MoveCardRequestObject request, Column destinationColumn)
+        {
+            if (request.DestinationCardIndex < 0 || request.DestinationCardIndex > destinationColumn.Cards.Count)
+            {
+                throw new IndexOutOfRangeException(request.DestinationCardIndex);
+            }
+        }
+
+
+        private async Task MoveCardToDifferentColumn(MoveCardRequestObject request, Card card, Column sourceList)
+        {
+            var destinationList = await _dbContext.Columns.FindAsync(request.DestinationColumnId);
+            if (destinationList == null) throw new ColumnNotFoundException(request.DestinationColumnId);
+
+            CheckDestinationIndexInRange(request, destinationList);
+
+            sourceList.Cards.Remove(card);
+            destinationList.Cards.Insert(request.DestinationCardIndex, card);
+            card.ColumnId = destinationList.Id;
+
+
+            UpdateDisplayOrders(sourceList);
+            UpdateDisplayOrders(destinationList);
+
+            CheckForDuplicateDisplayOrderValues(sourceList);
+            CheckForDuplicateDisplayOrderValues(destinationList);
+        }
+
+        private static void UpdateDisplayOrders(Column column)
+        {
+            for (int i = 0; i < column.Cards.Count; i++)
+            {
+                column.Cards.ElementAt(i).DisplayOrder = i + 1;
+            }
+        }
+
+        private static void MoveCardWithinSameColumn(MoveCardRequestObject request, Card card, Column sourceColumn)
+        {
+            CheckDestinationIndexInRange(request, sourceColumn);
+
+            // Get a list of all available indexes in the column, except for the destination index
+            var availableIndexes = Enumerable.Range(0, sourceColumn.Cards.Count)
+                .Where(i => i != request.DestinationCardIndex)
+                .ToList();
+
+            var indexQueue = new Queue<int>(availableIndexes);
+
+            card.DisplayOrder = request.DestinationCardIndex + 1;
+
+            foreach (var x in sourceColumn.Cards.OrderBy(c => c.DisplayOrder))
+            {
+                if (x.Id != request.CardId)
+                {
+                    // Update the display order of the other cards using the next available index
+                    x.DisplayOrder = indexQueue.Dequeue() + 1;
+                }
+            }
+
+            CheckForDuplicateDisplayOrderValues(sourceColumn);
+        }
+
+
+        private static void CheckForDuplicateDisplayOrderValues(Column column)
+        {
+            var displayOrderValues = column.Cards.Select(x => x.DisplayOrder).ToList();
+
+            if (displayOrderValues.Count != displayOrderValues.Distinct().Count())
+            {
+                throw new DuplicateDisplayOrderValuesException(displayOrderValues);
+            }
+        }
+
         private static bool CardAlreadyInPosition(MoveCardRequestObject request, Card card)
         {
-            return card.DisplayOrder == request.DestinationCardIndex && request.SourceColumnId == request.DestinationColumnId;
+            return card.DisplayOrder == request.DestinationCardIndex +1
+                && request.SourceColumnId == request.DestinationColumnId;
         }
     }
 }

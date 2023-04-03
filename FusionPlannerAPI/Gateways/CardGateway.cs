@@ -5,6 +5,8 @@ using FusionPlannerAPI.Factories;
 using FusionPlannerAPI.Gateways.Interfaces;
 using FusionPlannerAPI.Infrastructure;
 using FusionPlannerAPI.Services;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace FusionPlannerAPI.Gateways
 {
@@ -26,11 +28,21 @@ namespace FusionPlannerAPI.Gateways
             if (user == null) throw new UserNotFoundException(createdById);
 
             var card = request.ToDatabase(createdById);
+            card.DisplayOrder = await GetNextDisplayOrder(request.ColumnId);
 
             _dbContext.Cards.Add(card);
             await _dbContext.SaveChangesAsync();
 
             return card.Id;
+        }
+
+        private async Task<int> GetNextDisplayOrder(int columnId)
+        {
+            var largestDisplayOrder = (await _dbContext.Cards
+                .Where(x => x.ColumnId == columnId)
+                .MaxAsync(x => (int?)x.DisplayOrder)) ?? 0;
+
+            return largestDisplayOrder + 1;
         }
 
         public async Task DeleteCard(int cardId)

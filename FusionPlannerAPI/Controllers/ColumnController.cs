@@ -5,6 +5,7 @@ using FusionPlannerAPI.Services;
 using FusionPlannerAPI.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using IndexOutOfRangeException = FusionPlannerAPI.Exceptions.IndexOutOfRangeException;
 
 namespace FusionPlannerAPI.Controllers
 {
@@ -28,18 +29,44 @@ namespace FusionPlannerAPI.Controllers
             return Ok(column);
         }
 
-        [HttpGet]
-        public async Task<IActionResult> List([FromQuery(Name = "BoardId")] int boardId)
+        [HttpPost]
+        [Route("move-card")]
+        public async Task<IActionResult> MoveCard([FromBody] MoveCardRequestObject request)
         {
             try
             {
-                var columns = await _columnService.ListColumns(boardId);
+                await _columnService.MoveCard(request);
+
+                return NoContent();
+            }
+            catch (CardNotFoundException e)
+            {
+                return BadRequest(e.Message);
+            }
+            catch (ColumnNotFoundException e)
+            {
+                return BadRequest(e.Message);
+            }
+            catch (IndexOutOfRangeException e)
+            {
+                return BadRequest(e.Message);
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> List([FromQuery(Name = "BoardId")] int? boardId)
+        {
+            if (boardId == null) return BadRequest($"Parameter {nameof(boardId)} cannot be null");
+
+            try
+            {
+                var columns = await _columnService.ListColumns((int) boardId);
 
                 return Ok(columns);
             }
             catch (BoardNotFoundException e)
             {
-                return BadRequest($"bOARD not found with id {e.BoardId}");
+                return BadRequest(e.Message);
             }
         }
 
@@ -54,7 +81,7 @@ namespace FusionPlannerAPI.Controllers
             }
             catch (BoardNotFoundException e)
             {
-                return BadRequest($"Board not found with id {e.BoardId}");
+                return BadRequest(e.Message);
             }
         }
 
@@ -70,7 +97,7 @@ namespace FusionPlannerAPI.Controllers
             }
             catch (ColumnNotFoundException e)
             {
-                return BadRequest($"Column not found with id {e.ColumnId}");
+                return BadRequest(e.Message);
             }
         }
 
@@ -86,7 +113,7 @@ namespace FusionPlannerAPI.Controllers
             }
             catch (ColumnNotFoundException e)
             {
-                return BadRequest($"Column not found with id {e.ColumnId}");
+                return BadRequest(e.Message);
             }
         }
     }

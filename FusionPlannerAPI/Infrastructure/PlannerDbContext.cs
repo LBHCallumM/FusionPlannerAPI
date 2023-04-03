@@ -26,9 +26,9 @@ namespace FusionPlannerAPI.Infrastructure
                 .WithOne(card => card.Column)
                 .HasForeignKey(card => card.ColumnId);
 
-            modelBuilder.Entity<Card>()
-                .HasIndex(card => new { card.ColumnId, card.DisplayOrder })
-                .IsUnique();
+            //modelBuilder.Entity<Card>()
+            //    .HasIndex(card => new { card.ColumnId, card.DisplayOrder })
+            //    .IsUnique();
 
             modelBuilder.Entity<Column>()
                 .HasOne(c => c.Board)

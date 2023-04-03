@@ -35,8 +35,7 @@ namespace FusionPlannerAPI.Factories
                 CreatedAt = DateTime.UtcNow,
                 LastEditedAt = DateTime.UtcNow,
                 CreatedById = createdById,
-                IsArchived = false,
-                DisplayOrder = request.DisplayOrder
+                IsArchived = false
             };
         }
     }
