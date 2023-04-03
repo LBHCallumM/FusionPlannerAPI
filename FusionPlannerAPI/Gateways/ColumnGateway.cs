@@ -38,6 +38,7 @@ namespace FusionPlannerAPI.Gateways
 
             var columns = await _dbContext.Columns
                 .Where(x => x.BoardId == boardId)
+                .Where(x => x.IsArchived == false)
                 .Include(x => x.Cards)
                 .ToListAsync();
 
@@ -67,19 +68,30 @@ namespace FusionPlannerAPI.Gateways
             var column = await _dbContext.Columns.FindAsync(columnId);
             if (column == null) throw new ColumnNotFoundException(columnId);
 
+            if (column.IsArchived) throw new CannotEditArchivedColumnException();
+
             column.Name = request.Name;
 
             await _dbContext.SaveChangesAsync();
         }
 
-        public async Task DeleteColumn(int columnId)
+        public async Task ArchiveColumn(int columnId)
         {
             var column = await _dbContext.Columns.FindAsync(columnId);
             if (column == null) throw new ColumnNotFoundException(columnId);
 
-            // ToDo - Check for cards
+            column.IsArchived = true;
 
-            _dbContext.Columns.Remove(column);
+            await _dbContext.SaveChangesAsync();
+        }
+
+        public async Task RestoreColumn(int columnId)
+        {
+            var column = await _dbContext.Columns.FindAsync(columnId);
+            if (column == null) throw new ColumnNotFoundException(columnId);
+
+            column.IsArchived = false;
+
             await _dbContext.SaveChangesAsync();
         }
 
@@ -87,6 +99,8 @@ namespace FusionPlannerAPI.Gateways
         {
             var card = await _dbContext.Cards.FindAsync(request.CardId);
             if (card == null) throw new CardNotFoundException(request.CardId);
+
+            if (card.IsArchived) throw new CannotEditArchivedCardException();
 
             if (CardAlreadyInPosition(request, card))
             {
@@ -117,7 +131,6 @@ namespace FusionPlannerAPI.Gateways
                 throw new IndexOutOfRangeException(request.DestinationCardIndex);
             }
         }
-
 
         private async Task MoveCardToDifferentColumn(MoveCardRequestObject request, Card card, Column sourceList)
         {

@@ -8,6 +8,7 @@ namespace FusionPlannerAPI.Infrastructure
         public int Id { get; set; }
         public string Name { get; set; }
         public int BoardId { get; set; }
+        public bool IsArchived { get; set; }
         public virtual Board Board { get; set; }
         public virtual List<Card> Cards { get; set; }
     }

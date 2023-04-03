@@ -156,6 +156,36 @@ namespace FusionPlannerAPI.Tests.Gateways
         }
 
         [Test]
+        public async Task ListColumns_WhenCalled_DoesntIncludeArchivedColumns()
+        {
+            // Arrange
+            var board = _fixture.Build<Board>().Create();
+
+            InMemoryDb.Instance.Boards.Add(board);
+            await InMemoryDb.Instance.SaveChangesAsync();
+
+            var columns = _fixture.Build<Column>()
+                .With(c => c.BoardId, board.Id)
+                .With(c => c.IsArchived, false)
+                .Without(x => x.Board)
+                .Without(x => x.Cards)
+                .CreateMany(3)
+                .ToList();
+
+            columns.First().IsArchived = true;
+
+            InMemoryDb.Instance.Columns.AddRange(columns);
+            await InMemoryDb.Instance.SaveChangesAsync();
+
+            // Act
+            var result = await _columnGateway.ListColumns(board.Id);
+
+            // Assert
+            result.Should().NotBeNullOrEmpty();
+            result.Should().HaveCount(columns.Count() -1);
+        }
+
+        [Test]
         public async Task CreateColumn_WhenBoardNotFound_ThrowsBoardNotFoundException()
         {
             // Arrange
@@ -208,6 +238,24 @@ namespace FusionPlannerAPI.Tests.Gateways
         }
 
         [Test]
+        public async Task EditColumn_WhenArchived_ThrowsException()
+        {
+            // Arrange
+            var column = _fixture.Build<Column>().Create();
+
+            await InMemoryDb.Instance.Columns.AddAsync(column);
+            await InMemoryDb.Instance.SaveChangesAsync();
+
+            var request = _fixture.Create<EditColumnRequest>();
+
+            // Act
+            Func<Task> act = async () => await _columnGateway.EditColumn(column.Id, request);
+
+            // Assert
+            await act.Should().ThrowAsync<CannotEditArchivedColumnException>();
+        }
+
+        [Test]
         public async Task EditColumn_WhenCalled_SavesChangesToDatabase()
         {
             // Arrange
@@ -227,20 +275,20 @@ namespace FusionPlannerAPI.Tests.Gateways
         }
 
         [Test]
-        public async Task DeleteColumn_WhenColumnNotFound_ThrowsColumnNotFoundException()
+        public async Task ArchiveColumn_WhenColumnNotFound_ThrowsColumnNotFoundException()
         {
             // Arrange
             int nonExistingId = _fixture.Create<int>();
 
             // Act
-            Func<Task> act = async () => await _columnGateway.DeleteColumn(nonExistingId);
+            Func<Task> act = async () => await _columnGateway.ArchiveColumn(nonExistingId);
 
             // Assert
             await act.Should().ThrowAsync<ColumnNotFoundException>();
         }
 
         [Test]
-        public async Task DeleteColumn_WhenCalled_DeletesColumnFromDatabase()
+        public async Task ArchiveColumn_WhenCalled_ArchivesColumn()
         {
             // Arrange
             var column = _fixture.Build<Column>().Create();
@@ -249,11 +297,43 @@ namespace FusionPlannerAPI.Tests.Gateways
             await InMemoryDb.Instance.SaveChangesAsync();
 
             // Act
-            await _columnGateway.DeleteColumn(column.Id);
+            await _columnGateway.ArchiveColumn(column.Id);
 
             // Assert
             var dbResponse = await InMemoryDb.Instance.Columns.FindAsync(column.Id);
-            dbResponse.Should().BeNull();
+            dbResponse.Should().NotBeNull();
+            dbResponse.IsArchived.Should().BeTrue();
+        }
+
+        [Test]
+        public async Task RestoreColumn_WhenColumnNotFound_ThrowsColumnNotFoundException()
+        {
+            // Arrange
+            int nonExistingId = _fixture.Create<int>();
+
+            // Act
+            Func<Task> act = async () => await _columnGateway.RestoreColumn(nonExistingId);
+
+            // Assert
+            await act.Should().ThrowAsync<ColumnNotFoundException>();
+        }
+
+        [Test]
+        public async Task RestoreColumn_WhenCalled_ArchivesColumn()
+        {
+            // Arrange
+            var column = _fixture.Build<Column>().Create();
+
+            await InMemoryDb.Instance.Columns.AddAsync(column);
+            await InMemoryDb.Instance.SaveChangesAsync();
+
+            // Act
+            await _columnGateway.RestoreColumn(column.Id);
+
+            // Assert
+            var dbResponse = await InMemoryDb.Instance.Columns.FindAsync(column.Id);
+            dbResponse.Should().NotBeNull();
+            dbResponse.IsArchived.Should().BeFalse();
         }
 
         [Test]
@@ -326,6 +406,32 @@ namespace FusionPlannerAPI.Tests.Gateways
 
             // Assert
             await act.Should().ThrowAsync<ColumnNotFoundException>();
+        }
+
+        [Test]
+        public async Task MoveCard_ThrowsException_WhenArchived()
+        {
+            // Arrange
+            var sourceList = await SetupColumn(1, 5);
+            var destinationListId = 2;
+
+            sourceList.Cards.First().IsArchived = true;
+
+            await InMemoryDb.Instance.SaveChangesAsync();
+
+            var request = new MoveCardRequestObject
+            {
+                CardId = sourceList.Cards[0].Id,
+                SourceColumnId = sourceList.Id,
+                DestinationColumnId = destinationListId,
+                DestinationCardIndex = 4
+            };
+
+            // Act
+            Func<Task> act = async () => await _columnGateway.MoveCard(request);
+
+            // Assert
+            await act.Should().ThrowAsync<CannotEditArchivedCardException>();
         }
 
         [Test]

@@ -9,7 +9,8 @@ namespace FusionPlannerAPI.Services.Interfaces
         Task<IEnumerable<ColumnResponse>> ListColumns(int boardId);
         Task<int> CreateColumn(CreateColumnRequest request);
         Task EditColumn(int columnId, EditColumnRequest request);
-        Task DeleteColumn(int columnId);
+        Task ArchiveColumn(int columnId);
+        Task RestoreColumn(int columnId);
         Task MoveCard(MoveCardRequestObject request);
     }
 }

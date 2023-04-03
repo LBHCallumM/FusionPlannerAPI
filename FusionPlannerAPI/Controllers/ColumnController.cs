@@ -51,6 +51,10 @@ namespace FusionPlannerAPI.Controllers
             {
                 return BadRequest(e.Message);
             }
+            catch (CannotEditArchivedCardException e)
+            {
+                return BadRequest(e.Message);
+            }
         }
 
         [HttpGet]
@@ -99,15 +103,35 @@ namespace FusionPlannerAPI.Controllers
             {
                 return BadRequest(e.Message);
             }
+            catch (CannotEditArchivedColumnException e)
+            {
+                return BadRequest(e.Message);
+            }
         }
 
         [HttpPost]
-        [Route("{columnId}")]
-        public async Task<IActionResult> Delete([FromRoute] int columnId)
+        [Route("{columnId}/archive")]
+        public async Task<IActionResult> Archive([FromRoute] int columnId)
         {
             try
             {
-                await _columnService.DeleteColumn(columnId);
+                await _columnService.ArchiveColumn(columnId);
+
+                return NoContent();
+            }
+            catch (ColumnNotFoundException e)
+            {
+                return BadRequest(e.Message);
+            }
+        }
+
+        [HttpPost]
+        [Route("{columnId}/restore")]
+        public async Task<IActionResult> Restore([FromRoute] int columnId)
+        {
+            try
+            {
+                await _columnService.RestoreColumn(columnId);
 
                 return NoContent();
             }

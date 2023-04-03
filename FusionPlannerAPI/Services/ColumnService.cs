@@ -14,34 +14,39 @@ namespace FusionPlannerAPI.Services
             _gateway = gateway;
         }
 
-        public async Task<int> CreateColumn(CreateColumnRequest request)
+        public Task<int> CreateColumn(CreateColumnRequest request)
         {
-            return await _gateway.CreateColumn(request);
+            return _gateway.CreateColumn(request);
         }
 
-        public async Task DeleteColumn(int columnId)
+        public Task ArchiveColumn(int columnId)
         {
-            await _gateway.DeleteColumn(columnId);
+            return _gateway.ArchiveColumn(columnId);
         }
 
-        public async Task EditColumn(int columnId, EditColumnRequest request)
+        public Task RestoreColumn(int columnId)
         {
-            await _gateway.EditColumn(columnId, request);
+            return _gateway.RestoreColumn(columnId);
         }
 
-        public async Task<ColumnResponse> GetById(int columnId)
+        public Task EditColumn(int columnId, EditColumnRequest request)
         {
-            return await _gateway.GetById(columnId);
+            return _gateway.EditColumn(columnId, request);
         }
 
-        public async Task<IEnumerable<ColumnResponse>> ListColumns(int boardId)
+        public Task<ColumnResponse> GetById(int columnId)
         {
-            return await _gateway.ListColumns(boardId);
+            return _gateway.GetById(columnId);
         }
 
-        public async Task MoveCard(MoveCardRequestObject request)
+        public Task<IEnumerable<ColumnResponse>> ListColumns(int boardId)
         {
-            await _gateway.MoveCard(request);
+            return _gateway.ListColumns(boardId);
+        }
+
+        public Task MoveCard(MoveCardRequestObject request)
+        {
+            return _gateway.MoveCard(request);
         }
     }
 }
