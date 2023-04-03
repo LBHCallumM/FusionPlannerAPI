@@ -10,5 +10,6 @@ namespace FusionPlannerAPI.Gateways.Interfaces
         Task<int> CreateCard(CreateCardRequest request, int createdById);
         Task EditCard(int cardId, EditCardRequest request);
         Task DeleteCard(int cardId);
+        Task ArchiveCard(int cardId);
     }
 }

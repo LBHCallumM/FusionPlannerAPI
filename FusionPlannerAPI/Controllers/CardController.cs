@@ -80,5 +80,21 @@ namespace FusionPlannerAPI.Controllers
                 return BadRequest(e.Message);
             }
         }
+
+        [HttpPost]
+        [Route("{cardId}/archive")]
+        public async Task<IActionResult> Archive([FromRoute] int cardId)
+        {
+            try
+            {
+                await _cardService.ArchiveCard(cardId);
+
+                return NoContent();
+            }
+            catch (CardNotFoundException e)
+            {
+                return BadRequest(e.Message);
+            }
+        }
     }
 }

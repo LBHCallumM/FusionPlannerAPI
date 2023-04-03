@@ -194,5 +194,25 @@ namespace FusionPlannerAPI.Tests.Gateways
             result.Description.Should().Be(card.Description);
         }
 
+        [Test]
+        public async Task ArchiveCard_WhenTrue_SetsCardToArchived()
+        {
+            // Arrange
+            var card = _fixture.Build<Card>()
+                .With(x => x.IsArchived, false)
+                .Create();
+
+            await InMemoryDb.Instance.Cards.AddAsync(card);
+            await InMemoryDb.Instance.SaveChangesAsync();
+
+            // Act
+            await _cardGateway.ArchiveCard(card.Id);
+
+            // Assert
+            var dbResponse = await InMemoryDb.Instance.Cards.FindAsync(card.Id);
+
+            dbResponse.Should().NotBeNull();
+            dbResponse.IsArchived.Should().BeTrue();
+        }
     }
 }

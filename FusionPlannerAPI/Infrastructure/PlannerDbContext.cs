@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using System.Xml;
 
 namespace FusionPlannerAPI.Infrastructure
@@ -36,6 +37,8 @@ namespace FusionPlannerAPI.Infrastructure
                 .HasForeignKey(c => c.BoardId)
                 .IsRequired();
         }
+
+     
 
     }
 }

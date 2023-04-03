@@ -16,6 +16,11 @@ namespace FusionPlannerAPI.Services
             _gateway = cardGateway;
         }
 
+        public async Task ArchiveCard(int cardId)
+        {
+            await _gateway.ArchiveCard(cardId);
+        }
+
         public async Task<int> CreateCard(CreateCardRequest request, int createdById)
         {
             return await _gateway.CreateCard(request, createdById);

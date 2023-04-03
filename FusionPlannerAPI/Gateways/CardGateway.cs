@@ -73,5 +73,15 @@ namespace FusionPlannerAPI.Gateways
 
             return card.ToResponse();
         }
+
+        public async Task ArchiveCard(int cardId)
+        {
+            var card = await _dbContext.Cards.FindAsync(cardId);
+            if (card == null) throw new CardNotFoundException(cardId);
+
+            card.IsArchived = true;
+
+            await _dbContext.SaveChangesAsync();
+        }
     }
 }
